@@ -15,6 +15,17 @@ const discordWebhookUrl = 'https://discord.com/api/webhooks/1362192718218006580/
 app.use(express.json());
 
 app.post('/send', (req, res) => {
+     try {
+        const message = req.body.message;
+        console.log(`Received message: ${message}`); // Log the message for debugging
+        messageQueue += message + '\n';
+        lastRequestTime = Date.now();
+        res.send('Message received');
+    } catch (error) {
+        console.error('Error handling /send request:', error);
+        res.status(500).send('Internal Server Error');
+    }
+    
     // Get the message from the request body
     const message = req.body.message;
 
