@@ -1,17 +1,28 @@
-function sendDiscord(message)
-	local webhookUrl = "https://discord.com/api/webhooks/1362192718218006580/NeJsmRKwktwr6jzvGcW7fsofLIoOGoSvReQfjKkXongWIZabiZIAppiNX5i_7s2m9piL"
+const express = require('express');
+const fs = require('fs');
+const axios = require('axios');
+const multer = require('multer');
+const app = express();
 
-	local payload = {
-		content = "```\n" .. message .. "\n```"
-	}
+app.use(express.json());
 
-	local success, response = pcall(function()
-		return HttpService:PostAsync(webhookUrl, HttpService:JSONEncode(payload))
-	end)
+app.post('/send-to-discord', async (req, res) => {
+    const { message } = req.body;
+    const filename = 'message.txt';
 
-	if success then
-		print("Sent successfully")
-	else
-		warn("Failed to send:", response)
-	end
-end
+    fs.writeFileSync(filename, message);
+
+    const formData = new FormData();
+    formData.append('file', fs.createReadStream(filename));
+
+    try {
+        await axios.post('YOUR_DISCORD_WEBHOOK_URL', formData, {
+            headers: formData.getHeaders()
+        });
+        res.send('Sent successfully');
+    } catch (err) {
+        res.status(500).send('Error sending to Discord');
+    }
+});
+
+app.listen(3000, () => console.log('Listening on port 3000'));
