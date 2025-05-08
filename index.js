@@ -16,7 +16,7 @@ app.use(express.json());
 
 app.post('/send', (req, res) => {
      try {
-        const message = req.body.message;
+        const { message } = req.body;
         console.log(`Received message: ${message}`); // Log the message for debugging
         messageQueue += message + '\n';
         lastRequestTime = Date.now();
@@ -27,7 +27,7 @@ app.post('/send', (req, res) => {
     }
     
     // Get the message from the request body
-    const message = req.body.message;
+    const { message } = req.body;
 
     // Append the message to the message queue
     messageQueue += message + '\n';
