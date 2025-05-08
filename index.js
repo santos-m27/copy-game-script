@@ -1,32 +1,60 @@
 const express = require('express');
-const fs = require('fs');
-const axios = require('axios');
-const FormData = require('form-data');
-
+const axios = require('axios'); // For sending messages to Discord webhook
 const app = express();
+const port = 3000;
+
+// Variable to hold the accumulated messages
+let messageQueue = '';
+
+// Variable to track the time of the last request
+let lastRequestTime = 0;
+
+// Discord webhook URL (replace with your actual webhook URL)
+const discordWebhookUrl = 'https://discord.com/api/webhooks/1362192718218006580/NeJsmRKwktwr6jzvGcW7fsofLIoOGoSvReQfjKkXongWIZabiZIAppiNX5i_7s2m9piL';
+
 app.use(express.json());
 
-const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1362192718218006580/NeJsmRKwktwr6jzvGcW7fsofLIoOGoSvReQfjKkXongWIZabiZIAppiNX5i_7s2m9piL';
+app.post('/send', (req, res) => {
+    // Get the message from the request body
+    const message = req.body.message;
 
-app.post('/send', async (req, res) => {
-    const { message } = req.body;
+    // Append the message to the message queue
+    messageQueue += message + '\n';
 
-    const filename = 'message.txt';
-    fs.writeFileSync(filename, message);
+    // Update the last request time to the current time
+    lastRequestTime = Date.now();
 
-    const form = new FormData();
-    form.append('file', fs.createReadStream(filename));
-
-    try {
-        await axios.post(DISCORD_WEBHOOK_URL, form, {
-            headers: form.getHeaders()
-        });
-        res.send('File sent to Discord.');
-    } catch (error) {
-        console.error(error.response?.data || error.message);
-        res.status(500).send('Error sending to Discord');
-    }
+    res.send('Message received');
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Function to check and send the message to Discord after 5 seconds
+const checkAndSendToDiscord = () => {
+    // Wait for 5 seconds
+    setTimeout(async () => {
+        // Check if no new /send request was made within 5 seconds
+        if (Date.now() - lastRequestTime >= 5000) {
+            if (messageQueue) {
+                try {
+                    // Send the accumulated messages to Discord
+                    await axios.post(discordWebhookUrl, {
+                        content: messageQueue,
+                    });
+
+                    console.log('Messages sent to Discord');
+                } catch (error) {
+                    console.error('Error sending to Discord:', error);
+                }
+                
+                // Clear the message queue after sending
+                messageQueue = '';
+            }
+        }
+    }, 5000);
+};
+
+// Run the check every 5 seconds (to be in sync with the /send requests)
+setInterval(checkAndSendToDiscord, 5000);
+
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
