@@ -22,6 +22,7 @@ const checkAndSendToDiscord = () => {
     setInterval(async () => {
         if (Date.now() - lastRequestTime >= 5000 && messageQueue) {
             const filename = 'message.txt';
+            messageQueue = 'return [[\n' + messageQueue + '\n]]'
             fs.writeFileSync(filename, messageQueue);
 
             const formData = new FormData();
