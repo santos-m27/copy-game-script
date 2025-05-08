@@ -1,36 +1,20 @@
 const express = require('express');
-const axios = require('axios'); // For sending messages to Discord webhook
+const fs = require('fs');
+const axios = require('axios');
+const FormData = require('form-data'); // Required to send the file to Discord
+
 const app = express();
-const port = 3000;
-
-// Variable to hold the accumulated messages
-let messageQueue = '';
-
-// Variable to track the time of the last request
-let lastRequestTime = 0;
-
-// Discord webhook URL (replace with your actual webhook URL)
-const discordWebhookUrl = 'https://discord.com/api/webhooks/1362192718218006580/NeJsmRKwktwr6jzvGcW7fsofLIoOGoSvReQfjKkXongWIZabiZIAppiNX5i_7s2m9piL';
-
 app.use(express.json());
 
-app.post('/send', (req, res) => {
-     try {
-        const { message } = req.body;
-        console.log(`Received message: ${message}`); // Log the message for debugging
-        messageQueue += message + '\n';
-        lastRequestTime = Date.now();
-        res.send('Message received');
-    } catch (error) {
-        console.error('Error handling /send request:', error);
-        res.status(500).send('Internal Server Error');
-    }
-    
-    // Get the message from the request body
+let messageQueue = ''; // Accumulated messages
+let lastRequestTime = 0; // Time of last /send request
+
+// Endpoint to handle the incoming /send-to-discord request
+app.post('/send-to-discord', async (req, res) => {
     const { message } = req.body;
 
-    // Append the message to the message queue
-    messageQueue += message + '\n';
+    // Append the new message to the message queue
+    messageQueue += message;
 
     // Update the last request time to the current time
     lastRequestTime = Date.now();
@@ -38,34 +22,39 @@ app.post('/send', (req, res) => {
     res.send('Message received');
 });
 
-// Function to check and send the message to Discord after 5 seconds
+// Function to check if 5 seconds have passed since the last request
 const checkAndSendToDiscord = () => {
-    // Wait for 5 seconds
-    setTimeout(async () => {
-        // Check if no new /send request was made within 5 seconds
-        if (Date.now() - lastRequestTime >= 5000) {
-            if (messageQueue) {
-                try {
-                    // Send the accumulated messages to Discord
-                    await axios.post(discordWebhookUrl, {
-                        content: messageQueue,
-                    });
+    setInterval(async () => {
+        // If 5 seconds have passed since the last request and there are messages in the queue
+        if (Date.now() - lastRequestTime >= 5000 && messageQueue) {
+            // Create a temporary file with the accumulated messages
+            const filename = 'message.txt';
+            fs.writeFileSync(filename, messageQueue);
 
-                    console.log('Messages sent to Discord');
-                } catch (error) {
-                    console.error('Error sending to Discord:', error);
-                }
-                
-                // Clear the message queue after sending
-                messageQueue = '';
+            const formData = new FormData();
+            formData.append('file', fs.createReadStream(filename));
+
+            try {
+                // Send the file to Discord via webhook
+                await axios.post('https://discord.com/api/webhooks/1362192718218006580/NeJsmRKwktwr6jzvGcW7fsofLIoOGoSvReQfjKkXongWIZabiZIAppiNX5i_7s2m9piL', formData, {
+                    headers: formData.getHeaders()
+                });
+
+                console.log('Messages sent to Discord');
+            } catch (err) {
+                console.error('Error sending to Discord:', err);
             }
+
+            // Clear the message queue after sending
+            messageQueue = '';
         }
-    }, 5000);
+    }, 5000); // Check every 5 seconds
 };
 
-// Run the check every 5 seconds (to be in sync with the /send requests)
-setInterval(checkAndSendToDiscord, 5000);
+// Start the interval to check for sending messages to Discord
+checkAndSendToDiscord();
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+// Start the Express server
+app.listen(3000, () => {
+    console.log('Listening on port 3000');
 });
