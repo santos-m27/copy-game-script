@@ -14,6 +14,7 @@ let lastRequestTime = 0;
 app.post('/send-to-discord', async (req, res) => {
     const { message } = req.body;
     messageQueue += message;
+    console.log(messageQueue);
     lastRequestTime = Date.now();
     res.send('Message received');
 });
